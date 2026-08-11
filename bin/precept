@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# The first utterance of the Empirical Harness. Wire this as your harness startup
+# banner so it is the first thing emitted, before any agent acts.
+#   - A fixed opening line (the thesis) is printed first.
+#   - Below it, a rotating "maxim of the day" from precepts.txt (empiricist canon).
+#     Edit precepts.txt to change or extend the rotating pool. See PRECEPTS.md.
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PRECEPTS="$DIR/precepts.txt"
+
+cat <<'EOF'
+
+  \342\210\264   THE EMPIRICAL HARNESS   \342\210\264
+
+  A rule you cannot test is a belief.
+  Everything here ships with the check that would break it.
+EOF
+
+# --- Rotating maxim of the day, from precepts.txt ---
+if [ -f "$PRECEPTS" ]; then
+  N=$(grep -c . "$PRECEPTS")
+  if [ "$N" -gt 0 ]; then
+    DAY=$(date +%j | sed 's/^0*//')
+    [ -z "$DAY" ] && DAY=0
+    IDX=$(( (DAY % N) + 1 ))
+    P=$(sed -n "${IDX}p" "$PRECEPTS")
+    [ -n "$P" ] && printf '\n  \342\235\226 %s\n\n' "$P"
+  fi
+fi

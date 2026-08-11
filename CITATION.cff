@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use or adapt the Empirical Codex, please cite it."
+title: "The Empirical Codex"
+abstract: >-
+  A conduct codex for autonomous AI coding agents, skinned as the pillars of
+  empirical practice — the Bench, the Hypothesis, the Record, the Replication —
+  each rule carrying an observable falsifier. Part of a small family of conduct
+  harnesses.
+type: dataset
+authors:
+  - family-names: Wender
+    given-names: Arnold
+version: "1.0"
+date-released: "2026-08-11"
+license: CC-BY-4.0
+repository-code: "https://github.com/arnoldwender/empirical-harness"
+keywords:
+  - AI agents
+  - agent harness
+  - conduct codex
+  - prompt engineering
+  - agent alignment

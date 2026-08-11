@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+*.log
+
+# Keep the repo's own assets/ tracked despite the case-insensitive global /Assets/ ignore (macOS)
+!/assets/
