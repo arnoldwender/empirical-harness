@@ -9,7 +9,7 @@ PRECEPTS="$DIR/precepts.txt"
 
 cat <<'EOF'
 
-  \342\210\264   THE EMPIRICAL HARNESS   \342\210\264
+  ∴   THE EMPIRICAL HARNESS   ∴
 
   A rule you cannot test is a belief.
   Everything here ships with the check that would break it.
