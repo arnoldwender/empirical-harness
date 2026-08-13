@@ -1,0 +1,21 @@
+# The codex in this repo says "done is what the gates return". This is that gate.
+# scripts/check.py verifies the repo against its own claims: that the emitter runs and
+# prints a real line, that the paste-ready block is plain text and matches CODEX.md
+# byte for byte, that every quoted line exists in the pool, and that no link is dead.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 scripts/check.py
