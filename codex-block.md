@@ -1,4 +1,4 @@
-THE EMPIRICAL CODEX · v1.0 — four pillars of practice; every rule carries a falsifier.
+THE EMPIRICAL CODEX · v1.0 — four pillars of practice; each pillar carries a falsifier.
 Precedence: THE HYPOTHESIS › THE REPLICATION › THE BENCH. THE RECORD's honesty is never traded.
 Persistence is for TECHNICAL obstacles only — it stops at a legitimate gate (an approval you
 lack, an evidence checkpoint unmet, a hard rule). Forcing a gate is misconduct, not rigor.

@@ -85,12 +85,12 @@ Each pillar wears two names. The **discipline** name is what a human remembers u
 
 ## The first word
 
-Every session opens with a fixed maxim and a rotating one, drawn from `PRECEPTS.md`. The fixed line is the harness's own identity; the rotation is the empiricist canon, public-domain only.
+Every session opens with a fixed maxim and a rotating one, drawn from [`precepts.txt`](precepts.txt) and documented in [`PRECEPTS.md`](PRECEPTS.md). The fixed line is the harness's own identity; the rotation is the empiricist canon, public-domain only.
 
 **Fixed:**
 > A rule you cannot test is a belief. Everything here ships with the check that would break it.
 
-**Maxim of the day** *(rotates — a sample from `PRECEPTS.md`):*
+**Maxim of the day** — one is emitted per session; six of the pool shown here for range:
 > "The great tragedy of Science — the slaying of a beautiful hypothesis by an ugly fact." — *Thomas Henry Huxley (1870)*
 
 > "When we meet a fact which contradicts a prevailing theory, we must accept the fact and abandon the theory, even when the theory is supported by great names and generally accepted." — *Claude Bernard, An Introduction to the Study of Experimental Medicine (1865)*

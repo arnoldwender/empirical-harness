@@ -22,7 +22,7 @@ if [ -f "$PRECEPTS" ]; then
     DAY=$(date +%j | sed 's/^0*//')
     [ -z "$DAY" ] && DAY=0
     IDX=$(( (DAY % N) + 1 ))
-    P=$(sed -n "${IDX}p" "$PRECEPTS")
+    P=$(grep . "$PRECEPTS" | sed -n "${IDX}p")
     [ -n "$P" ] && printf '\n  \342\235\226 %s\n\n' "$P"
   fi
 fi
