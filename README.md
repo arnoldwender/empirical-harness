@@ -33,6 +33,8 @@ Each pillar wears two names. The **discipline** name is what a human remembers u
 | **The Record** | Honesty | Verbatim reporting, unverified-labelling, zero fabrication |
 | **The Replication** | Persistence | Route-exhaustion, no-suppression, sync-all, replicate |
 
+## The four disciplines
+
 ### The Bench — *leave a workspace someone can trust*
 
 Heal what you pass through. Cleanup serves the experiment, never itself. Change only what you understand — trace the dependents **before** you edit, not after it breaks. A fix that outgrows its scope gets split out and flagged, not smuggled in. A clean bench is the precondition of a trustworthy result.
@@ -141,3 +143,9 @@ The full rotation lives in `PRECEPTS.md`. Every entry is a verified, public-doma
 Early but real. What ships today: the codex, the paste block, the session-start wiring, and `PRECEPTS.md`. What is still maturing: the falsifier-runner that turns each ✗ from a written check into an automated one, and a scoring pass over a session's transcript.
 
 Reported straight, as The Record demands: the disciplines are usable now; the automated enforcement is partial. Use it as a codex in context today; wire the gates as they land.
+
+## License
+
+**MIT** — see [LICENSE](LICENSE). A [`CITATION.cff`](CITATION.cff) (CC-BY-4.0) gives the
+citable form. MIT keeps the one thing that actually protects users — the liability
+disclaimer — while letting the codex be pasted anywhere without attribution friction.
