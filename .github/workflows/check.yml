@@ -7,13 +7,6 @@ name: check
 on:
   push:
     branches: [main]
-    # Un commit que solo toca documentación no necesita CI.
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '**/*.txt'
   pull_request:
   workflow_dispatch:
 
