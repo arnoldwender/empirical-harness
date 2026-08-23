@@ -7,15 +7,29 @@ name: check
 on:
   push:
     branches: [main]
+    # Un commit que solo toca documentación no necesita CI.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '**/*.txt'
   pull_request:
   workflow_dispatch:
 
+
+concurrency:
+  # Un push nuevo sobre la misma rama cancela el CI del anterior: sin esto, una
+  # tanda de commits paga N ejecuciones y solo la última importa.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - run: python3 scripts/check.py
