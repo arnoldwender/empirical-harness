@@ -21,7 +21,10 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Runner propio: los self-hosted no consumen cuota de Actions y el check lo sigue
+    # emitiendo Actions, que es lo que la proteccion de rama exige por app_id. Con
+    # ubuntu-latest el job muere en 3 s por facturacion y la rama queda incommiteable.
+    runs-on: self-hosted
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
