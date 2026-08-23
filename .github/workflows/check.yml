@@ -10,12 +10,22 @@ on:
   pull_request:
   workflow_dispatch:
 
+
+concurrency:
+  # Un push nuevo sobre la misma rama cancela el CI del anterior: sin esto, una
+  # tanda de commits paga N ejecuciones y solo la última importa.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Runner propio: los self-hosted no consumen cuota de Actions y el check lo sigue
+    # emitiendo Actions, que es lo que la proteccion de rama exige por app_id. Con
+    # ubuntu-latest el job muere en 3 s por facturacion y la rama queda incommiteable.
+    runs-on: self-hosted
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - run: python3 scripts/check.py
