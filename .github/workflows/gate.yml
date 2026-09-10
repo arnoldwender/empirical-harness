@@ -1,0 +1,58 @@
+name: gate
+
+# The Empirical Harness runs its own falsifier on every push. A repo whose
+# thesis is "a rule you cannot test is a belief" cannot ship an untested rule.
+#
+# No step interpolates untrusted input into a shell. The only expression here is
+# `github.event_name` inside an `if:`, which never reaches a `run:`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, with --online. Link rot in a source URL is not a reason to block a
+    # commit that never touched the link, but it IS something to find out about
+    # before a reader does.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  citations:
+    name: citation gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install --upgrade pip pytest pyyaml
+
+      - name: Self-check (the repo keeps its own promises)
+        run: python3 scripts/check.py
+
+      - name: Citation gate
+        run: python3 gate/citations.py --sarif citations.sarif
+
+      - name: Citation gate, online (scheduled runs only)
+        if: github.event_name == 'schedule'
+        run: python3 gate/citations.py --online
+
+      - name: Mutation check (do the tests defend the gate?)
+        run: python3 tests/mutation_check.py
+
+      - name: Tests
+        run: python3 -m pytest tests/ -q
+
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citations-sarif
+          path: citations.sarif
+          if-no-files-found: ignore

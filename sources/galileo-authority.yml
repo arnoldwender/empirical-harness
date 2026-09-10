@@ -1,0 +1,26 @@
+# The clearest unverified case in the pool, and it stays visible rather than
+# being quietly dropped.
+#
+# Measured 2026-09-10: the attribution is disputed between two incompatible
+# sources — Francois Arago's Biographies of Distinguished Scientific Men (1859,
+# p. 365), and the third letter on sunspots to Mark Welser (December 1612) as
+# rendered in Stillman Drake's Discoveries and Opinions of Galileo (1957).
+#
+# What Galileo actually wrote in the sunspot letter is longer and differently
+# shaped; the familiar one-liner is a condensation, not a translation. And the
+# Drake rendering is from 1957, which is NOT public domain in either
+# jurisdiction — so even the better-sourced of the two candidates cannot be
+# quoted from that edition.
+work: "Attribution disputed - see provenance_note"
+author: "Galileo Galilei"
+author_born: 1564
+author_died: 1642
+year: 1612
+edition: "Unresolved between Arago (1859) and the third sunspot letter to Welser (1612)."
+pd_status_us: "The 1612 original and the 1859 Arago volume are public domain. Drake's 1957 rendering is NOT."
+pd_status_eu: "Galileo died 1642, so his own words are public domain. Stillman Drake died 1993; a Drake translation is under copyright until 2064."
+source_url: "https://en.wikiquote.org/wiki/Galileo_Galilei"
+provenance: unverified
+provenance_note: "Disputed between Arago's Biographies of Distinguished Scientific Men (1859) and the third sunspot letter to Welser (1612) via Drake (1957). The circulating one-liner is a condensation of a longer passage, not a faithful translation of either. Kept in the pool as a condensed attribution, never as a verbatim quotation - and never sourced to Drake, whose 1957 text is in copyright until 2064."
+quotes:
+  - "In questions of science, the authority of a thousand is not worth the humble reasoning of a single individual."

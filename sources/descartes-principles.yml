@@ -1,0 +1,24 @@
+# Marked unverified on purpose, and the note says exactly why.
+#
+# The wording in the pool circulates widely attributed to Descartes, most often
+# to the Principles of Philosophy (1644), Part I. It is consistent with the
+# method of doubt he sets out there, but this session could not match it to a
+# specific article in a specific published translation. Consistent-with is not
+# the same as located-in.
+#
+# The Record: name what you could not verify. It stays in the pool as an
+# attributed paraphrase, not as a located quotation, until someone reads it in
+# an edition and fills in the article number.
+work: "Principles of Philosophy (attribution not located)"
+author: "Rene Descartes"
+author_born: 1596
+author_died: 1650
+year: 1644
+edition: "Principia Philosophiae (1644). Specific article not identified."
+pd_status_us: "Any 17th-century original and any pre-1930 translation — public domain."
+pd_status_eu: "Author died 1650 — the original is public domain. The translation this wording comes from is unidentified, so its own term is unknown."
+source_url: "https://www.gutenberg.org/ebooks/4391"
+provenance: unverified
+provenance_note: "Widely attributed to the Principles of Philosophy but not located in a specific article of a specific translation. The sentiment matches Descartes' method of doubt; the sentence has not been matched to a published text. Do not present it as a located quotation."
+quotes:
+  - "If you would be a real seeker after truth, it is necessary that at least once in your life you doubt, as far as possible, all things."
