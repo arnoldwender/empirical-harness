@@ -4,3 +4,8 @@ node_modules/
 
 # Keep the repo's own assets/ tracked despite the case-insensitive global /Assets/ ignore (macOS)
 !/assets/
+
+# Bytecode de pytest: entro commiteado con el PR del gate de citas.
+__pycache__/
+*.py[cod]
+.pytest_cache/
