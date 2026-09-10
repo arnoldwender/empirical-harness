@@ -21,10 +21,18 @@ permissions:
 
 jobs:
   check:
-    # Runner propio: los self-hosted no consumen cuota de Actions y el check lo sigue
-    # emitiendo Actions, que es lo que la proteccion de rama exige por app_id. Con
-    # ubuntu-latest el job muere en 3 s por facturacion y la rama queda incommiteable.
-    runs-on: self-hosted
+    # Corria en `self-hosted` porque en su dia la cuota de Actions estaba agotada y
+    # el job moria en 3 s por facturacion. Esa razon dejo de aplicar, y el runner
+    # propio dejo de existir — medido 2026-09-10:
+    #
+    #   gh api repos/arnoldwender/empirical-harness/actions/runners --jq .total_count
+    #     -> 0
+    #   el workflow `gate` de este mismo repo corrio en ubuntu-latest -> success
+    #
+    # Con cero runners registrados, un check requerido que solo corre en self-hosted
+    # no es un gate: es una rama incommiteable. La proteccion exige el contexto
+    # `check`, asi que el job conserva su nombre.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
