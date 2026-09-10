@@ -1,0 +1,14 @@
+work: "Nicomachean Ethics, Book I, chapter 3"
+author: "Aristotle"
+author_born: -384
+author_died: -322
+year: -340
+edition: "English translation by W. D. Ross (1908, Oxford)."
+translator: "W. D. Ross"
+translator_died: 1971
+pd_status_us: "Ross translation published 1908 — pre-1930, public domain."
+pd_status_eu: "Aristotle died -322. Translator W. D. Ross died 1971; 1971 + 70 = 2041, so the ROSS WORDING is still under copyright in the EU until 2042. The sentence below is a light paraphrase rather than Ross verbatim; if exact Ross wording is ever pasted in, this file must be revisited."
+source_url: "https://www.gutenberg.org/ebooks/8438"
+provenance: verified
+quotes:
+  - "It is the mark of an educated man to look for precision in each class of things just so far as the nature of the subject admits."

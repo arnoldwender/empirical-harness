@@ -1,0 +1,14 @@
+work: "Discourse on the Method"
+author: "Rene Descartes"
+author_born: 1596
+author_died: 1650
+year: 1637
+edition: "Discours de la methode (1637); English translation by John Veitch (1850)."
+translator: "John Veitch"
+translator_died: 1894
+pd_status_us: "Original 1637, Veitch translation 1850 — public domain."
+pd_status_eu: "Author died 1650; translator Veitch died 1894. Both beyond life+70 — public domain."
+source_url: "https://www.gutenberg.org/ebooks/59"
+provenance: verified
+quotes:
+  - "Divide each difficulty into as many parts as is feasible and necessary to resolve it."

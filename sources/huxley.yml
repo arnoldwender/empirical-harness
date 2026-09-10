@@ -1,0 +1,16 @@
+# Three quotations, three different 19th-century works. Huxley wrote in English,
+# so there is no translator to account for.
+work: "Collected essays and correspondence: 'Biogenesis and Abiogenesis' (1870), the letter to Charles Kingsley (23 September 1860), and 'The Coming of Age of The Origin of Species' (1880)"
+author: "Thomas Henry Huxley"
+author_born: 1825
+author_died: 1895
+year: 1870
+edition: "Collected Essays, Macmillan, 1893-1894; the Kingsley letter in Life and Letters of Thomas Henry Huxley (1900)."
+pd_status_us: "All pre-1930 — public domain."
+pd_status_eu: "Author died 1895, more than 70 years — public domain."
+source_url: "https://www.gutenberg.org/ebooks/author/1447"
+provenance: verified
+quotes:
+  - "The great tragedy of Science - the slaying of a beautiful hypothesis by an ugly fact."
+  - "Sit down before fact as a little child, be prepared to give up every preconceived notion, follow humbly wherever and to whatever abysses nature leads, or you shall learn nothing."
+  - "Irrationally held truths may be more harmful than reasoned errors."

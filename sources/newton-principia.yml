@@ -1,0 +1,25 @@
+# The dating here is the whole point of this file.
+#
+# Both quotations belong to the SECOND edition of 1713, not the first of 1687.
+# In 1687 what is now Regula I was labelled *Hypothesis I*; Newton renamed the
+# first two hypotheses to regulae philosophandi in 1713. "Hypotheses non fingo"
+# appears in the General Scholium, which did not exist in 1687 either.
+#
+# Citing either line as "Principia (1687)" is wrong by 26 years, and it is the
+# exact error this gate was built to catch. Verified 2026-09-10 against the
+# editorial history of the regulae.
+work: "Philosophiae Naturalis Principia Mathematica, second edition"
+author: "Isaac Newton"
+author_born: 1642
+author_died: 1727
+year: 1713
+edition: "2nd edition, 1713 — Regulae Philosophandi I and the General Scholium. Neither passage is in the 1687 first edition."
+translator: "Andrew Motte (1729), as revised by Florian Cajori (1934)"
+translator_died: 1953
+pd_status_us: "Original 1713; Motte translation 1729 — public domain."
+pd_status_eu: "Author died 1727. Motte died 1734. Both far beyond life+70 — public domain."
+source_url: "https://www.thelatinlibrary.com/newton.regulae.html"
+provenance: verified
+quotes:
+  - "I frame no hypotheses."
+  - "We are to admit no more causes of natural things than such as are both true and sufficient to explain their appearances."

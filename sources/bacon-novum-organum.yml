@@ -1,0 +1,14 @@
+# Provenance for the Novum Organum quotations in precepts.txt.
+work: "Novum Organum"
+author: "Francis Bacon"
+author_born: 1561
+author_died: 1626
+year: 1620
+edition: "Translation from the Latin; the English wording below is the one in common circulation since the 19th-century Spedding, Ellis and Heath edition (1857-1874)."
+pd_status_us: "Published 1620; translation 1857-1874. Both pre-1930 — public domain."
+pd_status_eu: "Author died 1626; translators Spedding (d. 1881), Ellis (d. 1859), Heath (d. 1888). All more than 70 years dead — public domain."
+source_url: "https://www.gutenberg.org/ebooks/45988"
+provenance: verified
+quotes:
+  - "What a man had rather were true, he more readily believes."
+  - "Nature, to be commanded, must be obeyed."

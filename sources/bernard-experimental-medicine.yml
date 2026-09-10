@@ -1,0 +1,20 @@
+# Bernard wrote in French. The English wording in the pool is the Greene
+# translation, and the TRANSLATION carries its own copyright term — which is why
+# translator_died is recorded separately from author_died. Greene died in 1947,
+# so the translation cleared EU life+70 in 2018.
+work: "An Introduction to the Study of Experimental Medicine"
+author: "Claude Bernard"
+author_born: 1813
+author_died: 1878
+year: 1865
+edition: "Introduction a l'etude de la medecine experimentale (1865); English translation Macmillan, 1927."
+translator: "Henry Copley Greene"
+translator_died: 1947
+pd_status_us: "French original 1865 and the 1927 translation are both pre-1930 — public domain."
+pd_status_eu: "Author died 1878. Translator Henry Copley Greene died 1947; 1947 + 70 = 2017, so the translation entered the EU public domain in 2018."
+source_url: "https://www.gutenberg.org/ebooks/72220"
+provenance: verified
+quotes:
+  - "When we meet a fact which contradicts a prevailing theory, we must accept the fact and abandon the theory, even when the theory is supported by great names and generally accepted."
+  - "The doubter is a true man of science: he doubts only himself and his interpretations, but he believes in science."
+  - "Man can learn nothing except by going from the known to the unknown."

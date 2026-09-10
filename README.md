@@ -107,11 +107,78 @@ The full rotation lives in `PRECEPTS.md`. Every entry is a verified, public-doma
 
 ---
 
+## The gate — `gate/citations.py`
+
+This edition carries an executable falsifier for The Record, and it is what
+makes this repo different from its sibling harnesses rather than a reskin of
+them: **every attributed quotation must trace to a source with provenance
+someone else can check.**
+
+```bash
+python3 gate/citations.py            # offline
+python3 gate/citations.py --online   # also resolve every source URL
+python3 gate/citations.py --sarif out.json
+```
+
+Exit `0` clean · `1` findings · `2` the gate itself failed. The third is not
+decoration: a checker that returns `1` when it crashed reads as "I found
+something", and one that returns `0` reads as "clean" and fails open.
+
+| Check | Catches |
+|---|---|
+| `unsourced-quote` | a quotation that resolves to no file in `sources/` |
+| `incomplete-provenance` | a source missing work, author, dates, PD status or URL — without which check 1 is circular, since anyone could silence it by pasting the quotation in |
+| `unverified-without-note` | `provenance: unverified` that does not say *what* is unverified |
+| `anachronism` | a work dated before its author was born or after they died, unless `posthumous: true` is declared |
+| `pd-claim` | an EU public-domain claim that ignores the translator's own copyright term |
+| `dead-source` | (`--online`) a source URL that no longer resolves |
+
+### Why this and not a spell-checker
+
+`scripts/check.py` already verifies that a quotation in the README exists
+somewhere in this repo. That catches a README quoting a line the emitter never
+emits. It does **not** catch the failure that actually shipped across this
+family: a quotation that exists in the pool, is beautifully formatted, and is
+not real.
+
+Two dated metadata errors got past every human reader:
+
+- *"Sir Edwin Arnold, The Song Celestial (1885)"* — Arnold was knighted in 1888.
+- *Newton, "Principia (1687)", Rule I* — in the 1687 edition that passage is
+  **Hypothesis I**. It becomes *Regula I* only in the second edition of 1713.
+
+Neither is catchable by grep. Both are catchable by arithmetic against the
+author's dates and the edition history.
+
+### The two the gate says out loud
+
+Running it on this repo reports what could not be confirmed, rather than
+quietly dropping it:
+
+- **Descartes, *"If you would be a real seeker after truth…"*** — widely
+  attributed to the *Principles of Philosophy* (1644), not located in a specific
+  article of a specific translation. Consistent-with is not located-in.
+- **Galileo, *"In questions of science, the authority of a thousand…"*** —
+  attribution disputed between Arago (1859) and the third sunspot letter to
+  Welser (1612) via Drake. The circulating one-liner is a condensation, not a
+  translation — and Drake's 1957 rendering is under copyright until 2064, so it
+  cannot be the source either.
+
+Both stay in the pool, marked, with the reason written down. That is The Record
+applied to the harness itself: name what you could not verify.
+
 ## Status
 
-Early but real. What ships today: the codex, the paste block, the session-start wiring, `PRECEPTS.md`, a worked before/after example ([EXAMPLE.md](EXAMPLE.md)) — the same task run once without the pillars and once with them — and starter agents already carrying the codex ([agents/](agents/)). What is still maturing: the falsifier-runner that turns each **Falsifier:** line from a written check into an automated one, and a scoring pass over a session's transcript.
+The disciplines are usable now and The Record's falsifier is automated: the
+citation gate runs in CI on every push, with a mutation check that deletes each
+rule and requires the suite to go red — a test that passes with the mechanism
+removed is decoration.
 
-Reported straight, as The Record demands: the disciplines are usable now; the automated enforcement is partial. Use it as a codex in context today; wire the gates as they land.
+Reported straight, as The Record demands: **one of the four pillars has an
+executable falsifier; three do not yet.** The Bench, The Hypothesis and The
+Replication are still enforced by reading. Sibling harnesses in this family
+carry the executable falsifiers for those. Also still open: a scoring pass over
+a session's transcript.
 
 ## License
 
