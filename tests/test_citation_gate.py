@@ -414,6 +414,70 @@ def test_unparseable_source_is_reported_not_skipped(repo: Path) -> None:
     assert "sources" in r.stdout
 
 
+# --- one parser, in every environment ----------------------------------------
+
+def test_a_folded_block_is_refused_rather_than_guessed(repo: Path) -> None:
+    """The Angelical regression: green on the author's machine, red in CI.
+
+    A source file carried its provenance note as a folded block (`>-`). PyYAML
+    reads that; the parser this gate ships does not. While the gate preferred
+    PyYAML when it happened to be installed, the file passed locally and failed
+    in the container where the merge is actually gated — the worst shape a gate
+    can have, because the failure appears only after the work looks finished.
+
+    The fix was not to teach the parser folded blocks. It was to stop consulting
+    a richer parser than the one that runs in CI, so that what the author sees
+    is what the gate enforces. This test pins that: the construct is REFUSED,
+    loudly, on any machine.
+    """
+    (repo / "sources" / "bacon.yml").write_text(
+        CLEAN_SOURCE.replace('pd_status_us: "Published 1605 - public domain."',
+                             "pd_status_us: >-\n  Published 1605 - public domain.\n"),
+        encoding="utf-8")
+    r = run(repo)
+    assert r.returncode == 1, f"a construct this parser cannot read passed:\n{r.stdout}"
+    assert "unparseable" in r.stdout, r.stdout
+
+
+def test_the_gate_reads_the_same_with_and_without_pyyaml(repo: Path) -> None:
+    """The falsifier for the decision above, run as behaviour and not as a grep.
+
+    Shadowing `yaml` with a module that refuses to import reproduces the CI
+    container on a developer machine. Identical verdict AND identical output is
+    the property that matters: a gate whose answer depends on what happens to be
+    installed is not one gate, it is two wearing the same name.
+
+    Agreement is checked on BOTH sides of the verdict. Agreement on a clean repo
+    is cheap — the two parsers never disagreed about well-formed data, which is
+    why the divergence went unnoticed for as long as it did. The disagreement
+    lives on the refusal, so the refusal is where this test spends its weight.
+    """
+    (repo / "blocked").mkdir()
+    (repo / "blocked" / "yaml.py").write_text(
+        'raise ImportError("no third-party parser here")\n', encoding="utf-8")
+
+    def bare() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, str(GATE)], capture_output=True, text=True, check=False,
+            env={**os.environ, "HARNESS_ROOT": str(repo),
+                 "PYTHONPATH": str(repo / "blocked")})
+
+    clean_rich, clean_bare = run(repo), bare()
+    assert clean_bare.returncode == clean_rich.returncode == 0, clean_bare.stdout
+    assert clean_bare.stdout == clean_rich.stdout, "clean run differs without PyYAML"
+
+    (repo / "sources" / "bacon.yml").write_text(
+        CLEAN_SOURCE.replace('pd_status_us: "Published 1605 - public domain."',
+                             "pd_status_us: >-\n  Published 1605 - public domain.\n"),
+        encoding="utf-8")
+    red_rich, red_bare = run(repo), bare()
+    assert red_bare.returncode == red_rich.returncode == 1, (
+        f"the two environments disagree on a construct only one of them reads:\n"
+        f"  with PyYAML available: exit {red_rich.returncode}\n"
+        f"  with it blocked:       exit {red_bare.returncode}")
+    assert red_bare.stdout == red_rich.stdout, "refusal differs without PyYAML"
+
+
 # --- SARIF output ------------------------------------------------------------
 
 def test_sarif_is_written_and_well_formed(repo: Path, tmp_path: Path) -> None:
