@@ -68,6 +68,13 @@ MUTANTS = [
     ("SHAPE C attribution on its own line",
      "                    out.append((lineno, quote, body.lstrip(\"—– \").strip()))",
      "                    pass"),
+    # PARSER: guess instead of refusing. This gate ships its own YAML parser and
+    # runs it in every environment, so what the parser silently tolerates is what
+    # the gate silently accepts. Skipping a line it cannot read turns a refusal
+    # into a partial read — the source file looks complete and is not.
+    ("PARSER refuses what it cannot read",
+     '            raise ValueError(f"unsupported indentation: {raw!r}")',
+     "            continue"),
 ]
 
 

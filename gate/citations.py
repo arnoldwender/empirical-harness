@@ -141,11 +141,26 @@ def norm(s: str) -> str:
 # --- loading -----------------------------------------------------------------
 
 def load_sources() -> tuple[list[Source], list[Finding]]:
-    """Read sources/*.yml. Falls back to a minimal parser when PyYAML is absent.
+    """Read sources/*.yml with this file's own parser, in every environment.
 
-    The fallback exists so the gate runs in a bare CI container without a pip
-    install. It handles exactly the shape this repo's source files use — scalars
-    and a `quotes:` list — and refuses anything else rather than guessing.
+    One parser, deliberately. The gate used to prefer PyYAML and keep the
+    minimal parser as a fallback "for a bare CI container", and that arrangement
+    is how the Angelical edition shipped a source file that was green on the
+    author's machine and red in CI: PyYAML accepts a folded block (`>-`), the
+    minimal parser does not, and only the minimal parser ever runs where the
+    merge is gated. A tool that promises to run without dependencies does not
+    get to be checked against a richer parser than the one it ships with — the
+    fallback is not a courtesy, it defines the real subset of the format.
+
+    Removing the preference removes the divergence. Measured across the ten
+    editions before the change: every source file already parsed identically
+    with and without PyYAML, so this drops a branch nobody was relying on and
+    which no CI run had ever executed. It also drops a mutant that could not be
+    killed — the Nerd edition's own gate flagged that dead branch as untested,
+    correctly, and no test could have fixed it while the code was unreachable.
+
+    The parser handles exactly the shape these source files use — scalars and a
+    `quotes:` list — and refuses anything else rather than guessing.
 
     Every function here RETURNS its findings rather than appending to a list the
     caller handed in. The out-parameter version reads fine and is a genuine
@@ -162,18 +177,10 @@ def load_sources() -> tuple[list[Source], list[Finding]]:
         findings.append(Finding("sources", f"no sources/ directory at {SOURCES}"))
         return [], findings
 
-    try:
-        import yaml  # type: ignore[import-untyped]
-
-        def parse(text: str) -> Any:
-            return yaml.safe_load(text)
-    except ImportError:
-        parse = _parse_minimal_yaml
-
     out: list[Source] = []
     for p in sorted(SOURCES.glob("*.yml")):
         try:
-            data = parse(p.read_text(encoding="utf-8"))
+            data = _parse_minimal_yaml(p.read_text(encoding="utf-8"))
         except Exception as exc:                      # noqa: BLE001 - reported, not swallowed
             findings.append(Finding("sources", f"{p.name}: unparseable ({exc})"))
             continue
