@@ -20,10 +20,14 @@ no scripture — the gate is being tested, not the repo's canon.
 
 from __future__ import annotations
 
+import contextlib
+import http.server
 import os
 import subprocess
 import sys
 import textwrap
+import threading
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -476,6 +480,87 @@ def test_the_gate_reads_the_same_with_and_without_pyyaml(repo: Path) -> None:
         f"  with PyYAML available: exit {red_rich.returncode}\n"
         f"  with it blocked:       exit {red_bare.returncode}")
     assert red_bare.stdout == red_rich.stdout, "refusal differs without PyYAML"
+
+
+# --- CHECK 5: --online, against a local server and never the network ---------
+
+@contextlib.contextmanager
+def serving(status: int) -> Iterator[str]:
+    """A localhost server answering every HEAD with `status`. Yields its URL.
+
+    CHECK 5 resolves source URLs, so testing it looked like it needed the
+    network — and a test that needs the network is a test that fails on a train.
+    A server on an ephemeral port makes the check testable offline and
+    deterministic, which is what let the carve-out below be pinned at all.
+    """
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_HEAD(self) -> None:                        # noqa: N802 - stdlib name
+            self.send_response(status)
+            self.end_headers()
+
+        def log_message(self, *args: object) -> None:
+            """Silence the per-request line; pytest output is the report here."""
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{srv.server_address[1]}/source"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def with_url(repo: Path, url: str) -> None:
+    (repo / "sources" / "bacon.yml").write_text(
+        CLEAN_SOURCE.replace('source_url: "https://www.gutenberg.org/ebooks/5500"',
+                             f'source_url: "{url}"'), encoding="utf-8")
+
+
+def test_online_check_reports_a_source_that_no_longer_resolves(repo: Path) -> None:
+    """Without this the whole of CHECK 5 could be deleted and the suite stay green.
+
+    Measured 2026-09-12: it could. The Nerd edition's gate mutates this file and
+    requires the suite to kill each mutant; `check_urls_online` was the one
+    survivor of an unbounded run — the tests named the function and nothing
+    exercised it, which is the exact shape that gate exists to catch.
+    """
+    with serving(404) as url:
+        with_url(repo, url)
+        r = run(repo, "--online")
+    assert r.returncode == 1, r.stdout
+    assert "dead-source" in r.stdout, r.stdout
+
+
+def test_online_check_passes_a_source_that_resolves(repo: Path) -> None:
+    """The other half: the check must not fire on a URL that answers."""
+    with serving(200) as url:
+        with_url(repo, url)
+        r = run(repo, "--online")
+    assert r.returncode == 0, r.stdout
+
+
+def test_a_waf_block_is_not_link_rot(repo: Path) -> None:
+    """403/405/429 are declared carve-outs, and they are not decoration.
+
+    Zenodo answers 403 to a HEAD from a script — its WAF, not a dead DOI. A gate
+    that reads that as link rot teaches its users to stop believing it, so the
+    carve-out is load-bearing and gets a test of its own.
+    """
+    with serving(403) as url:
+        with_url(repo, url)
+        r = run(repo, "--online")
+    assert r.returncode == 0, f"a WAF block was read as link rot:\n{r.stdout}"
+
+
+def test_online_check_reports_a_host_that_refuses_the_connection(repo: Path) -> None:
+    """A refused connection is a finding, not a silent pass.
+
+    Port 1 on loopback: nothing listens, and no packet leaves the machine.
+    """
+    with_url(repo, "http://127.0.0.1:1/source")
+    r = run(repo, "--online")
+    assert r.returncode == 1, r.stdout
+    assert "dead-source" in r.stdout, r.stdout
 
 
 # --- SARIF output ------------------------------------------------------------

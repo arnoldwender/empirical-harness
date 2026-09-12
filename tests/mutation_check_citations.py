@@ -75,6 +75,14 @@ MUTANTS = [
     ("PARSER refuses what it cannot read",
      '            raise ValueError(f"unsupported indentation: {raw!r}")',
      "            continue"),
+    # CHECK 5 lives behind --online, which is why it went undefended the longest:
+    # the suite never passed the flag, so the whole function could be deleted with
+    # the suite green. The Nerd edition's no_cargo_cult gate found it as the only
+    # survivor of an unbounded run over this file. The tests now drive it against
+    # a localhost server instead of the network, so it is mutable like the rest.
+    ("CHECK 5 dead-source",
+     "            findings += check_urls_online(sources)",
+     "            pass"),
 ]
 
 
