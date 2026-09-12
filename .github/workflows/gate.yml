@@ -31,7 +31,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: python -m pip install --upgrade pip pytest pyyaml
+        run: python -m pip install --upgrade pip pytest
 
       - name: Self-check (the repo keeps its own promises)
         run: python3 scripts/check.py
@@ -43,8 +43,8 @@ jobs:
         if: github.event_name == 'schedule'
         run: python3 gate/citations.py --online
 
-      - name: Mutation check (do the tests defend the gate?)
-        run: python3 tests/mutation_check.py
+      - name: Mutation check (do the tests defend the citation gate?)
+        run: python3 tests/mutation_check_citations.py
 
       - name: Tests
         run: python3 -m pytest tests/ -q
