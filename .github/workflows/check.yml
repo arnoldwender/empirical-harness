@@ -21,17 +21,10 @@ permissions:
 
 jobs:
   check:
-    # Corria en `self-hosted` porque en su dia la cuota de Actions estaba agotada y
-    # el job moria en 3 s por facturacion. Esa razon dejo de aplicar, y el runner
-    # propio dejo de existir — medido 2026-09-10:
-    #
-    #   gh api repos/arnoldwender/empirical-harness/actions/runners --jq .total_count
-    #     -> 0
-    #   el workflow `gate` de este mismo repo corrio en ubuntu-latest -> success
-    #
-    # Con cero runners registrados, un check requerido que solo corre en self-hosted
-    # no es un gate: es una rama incommiteable. La proteccion exige el contexto
-    # `check`, asi que el job conserva su nombre.
+    # Corria en `self-hosted`. Medido 2026-09-10: cero runners registrados en
+    # GitHub y ninguno en la maquina. Un check requerido que solo corre en un
+    # runner inexistente no es un gate: es una rama incommiteable. La cuota de
+    # Actions, que fue la razon original, ya no es el problema.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
