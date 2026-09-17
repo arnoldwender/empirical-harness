@@ -46,6 +46,36 @@ jobs:
       - name: Mutation check (do the tests defend the citation gate?)
         run: python3 tests/mutation_check_citations.py
 
+      # The order gate judges a SESSION, and there is no session in CI. So this
+      # job does not pretend to judge one: it proves the gate still has teeth,
+      # against a sample log that must pass and a planted defect that must not.
+      # The gate is report-only by design; what can fail this job is the gate
+      # being broken, never somebody's reading habits.
+      - name: Mutation check (do the tests defend the order gate?)
+        run: python3 tests/mutation_check_read_order.py
+
+      - name: Order gate, against a sample log it has to pass
+        run: python3 gate/read_order.py --toollog gate/sample-toollog.jsonl --sarif read-order.sarif
+
+      # A gate nobody has watched go red is a belief. An edit ahead of its read
+      # must come back 1 — not 0 (fails open) and not 2 (the gate itself broke).
+      - name: The falsifier — an edit ahead of its read must be REJECTED
+        run: |
+          printf '%s\n' \
+            '{"op": "edit", "path": "gate/citations.py"}' \
+            '{"op": "read", "path": "gate/citations.py", "start": 1, "lines": 687, "total": 687}' \
+            > planted-toollog.jsonl
+          set +e
+          python3 gate/read_order.py --toollog planted-toollog.jsonl
+          code=$?
+          set -e
+          rm -f planted-toollog.jsonl
+          if [ "$code" -ne 1 ]; then
+            echo "the gate returned $code for an edit ahead of its read; expected 1" >&2
+            exit 1
+          fi
+          echo "the gate rejected the edit that came before its read, as it must"
+
       - name: Tests
         run: python3 -m pytest tests/ -q
 
@@ -55,4 +85,12 @@ jobs:
         with:
           name: citations-sarif
           path: citations.sarif
+          if-no-files-found: ignore
+
+      - name: Upload order-gate SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: read-order-sarif
+          path: read-order.sarif
           if-no-files-found: ignore

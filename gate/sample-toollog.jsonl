@@ -1,0 +1,7 @@
+{"op": "read", "path": "gate/citations.py", "start": 1, "lines": 400, "total": 687}
+{"op": "read", "path": "gate/citations.py", "start": 401, "lines": 287, "total": 687}
+{"op": "edit", "path": "gate/citations.py"}
+{"op": "create", "path": "tests/test_new_check.py"}
+{"op": "edit", "path": "tests/test_new_check.py"}
+{"op": "read", "path": "README.md", "full": true}
+{"op": "edit", "path": "README.md"}
