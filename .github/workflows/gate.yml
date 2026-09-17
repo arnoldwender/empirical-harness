@@ -76,6 +76,42 @@ jobs:
           fi
           echo "the gate rejected the edit that came before its read, as it must"
 
+      # The live hook is the order gate at the moment of the edit. Same rule as
+      # above: CI cannot run a session, so it proves the hook still has teeth —
+      # its mutants die, and a planted partial read ahead of an edit is warned about.
+      - name: Mutation check (do the tests defend the live hook?)
+        run: python3 tests/mutation_check_read_before_edit.py
+
+      - name: The live hook — a partial read ahead of an edit must be WARNED about
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, sys, tempfile
+          d = tempfile.mkdtemp()
+          target = os.path.join(d, "planted.py")
+          with open(target, "w") as fh:
+              fh.write("".join(f"line {i}\n" for i in range(1, 201)))
+          rows = [
+              {"type": "assistant", "timestamp": "2099-01-01T00:00:00.000Z", "message": {"role": "assistant",
+               "content": [{"type": "tool_use", "id": "t1", "name": "Read", "input": {"file_path": target, "limit": 20}}]}},
+              {"type": "user", "timestamp": "2099-01-01T00:00:01.000Z", "message": {"role": "user",
+               "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "x"}]},
+               "toolUseResult": {"type": "text", "file": {"filePath": target, "numLines": 20, "startLine": 1, "totalLines": 201}}},
+          ]
+          transcript = os.path.join(d, "session.jsonl")
+          with open(transcript, "w") as fh:
+              fh.write("".join(json.dumps(r) + "\n" for r in rows))
+          payload = {"session_id": "ci", "transcript_path": transcript, "cwd": d, "hook_event_name": "PreToolUse",
+                     "tool_name": "Edit", "tool_input": {"file_path": target, "old_string": "a", "new_string": "b"}}
+          r = subprocess.run([sys.executable, "hooks/read-before-edit.py"], input=json.dumps(payload),
+                             capture_output=True, text=True, env={**os.environ, "READ_ORDER_RECEIPTS": "off"})
+          out = json.loads(r.stdout) if r.stdout.strip() else {}
+          text = (out.get("hookSpecificOutput") or {}).get("additionalContext", "")
+          if r.returncode != 0 or "20 of 200 lines" not in text:
+              print(f"the hook returned {r.returncode} and said {text!r}; expected a warning about 20 of 200 lines", file=sys.stderr)
+              sys.exit(1)
+          print("the hook warned about the partial read, as it must:", text[:80])
+          PY
+
       - name: Tests
         run: python3 -m pytest tests/ -q
 

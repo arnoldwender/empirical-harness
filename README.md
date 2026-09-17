@@ -79,6 +79,7 @@ Each pillar wears two names. The **discipline** name is what a human remembers u
 
 - **Paste the block.** Drop the contents of [`codex-block.md`](codex-block.md) into the instructions your agent already reads — `AGENTS.md`, `CLAUDE.md`, a system prompt, whatever your harness loads. It is the single source the hook and your agent file share.
 - **Or wire the hook.** [`hooks/session-start.sh`](hooks/session-start.sh) emits the first word and the conduct block at the top of every session — see [hooks/](hooks/).
+- **And the live one.** [`hooks/read-before-edit.py`](hooks/read-before-edit.py) runs the order gate's question at the moment of every `Edit`/`Write` and warns the agent when the file was not read in full — see [hooks/](hooks/) and *The second gate* below.
 - **Or install it as an Agent Skill.** [`SKILL.md`](SKILL.md) packages the same block in the
   [Agent Skills](https://agentskills.io/specification) format: clone this repository into your
   agent's skills directory as `empirical-harness/` (the directory name must match the skill name).
@@ -258,18 +259,53 @@ It is **report-only**: SARIF `warning`, and deliberately not a required status
 check. In CI it runs against a sample log and a planted defect, to prove it
 still has teeth; it judges a real session only where someone points it at one.
 
+### Live, before the edit lands — `hooks/read-before-edit.py`
+
+A verdict after the session is the right shape for a judge and the wrong shape
+for a correction: by then the edit on the half-read file has been made. So the
+same predicate also runs as a Claude Code `PreToolUse` hook on `Edit`, `Write`
+and `MultiEdit`, against the session transcript the runtime hands every hook,
+for that one file only. If the file was not read in full since the last context
+compaction — and this session did not create or overwrite it — the agent gets
+the finding **in the tool result**, and the edit goes through:
+
+> read-order: you are about to edit `x.py` having read 20 of 200 lines in this
+> session (windows: 1-20). … Warning mode: this edit is NOT blocked.
+
+Warning, not blocking, on purpose: the measured base rate is nine sessions in
+ten, and a guard that stops nine sessions in ten is uninstalled by the
+eleventh. Every run leaves a receipt (verdict, lines seen, lines total), so
+whether the warning changes anything is a count, not an impression. A `block`
+mode exists behind an environment variable for whoever has measured their own
+rate and decided.
+
+Three things the live hook does that the gate cannot, each with its evidence
+in the file's header: it remaps the read windows through the session's own
+edits exactly, with the `structuredPatch` every Edit result carries (a first
+version that merely kept the old windows was refuted by one sequence — read
+1-50 of 100, delete the first 50, read 26-50 of what remains, and lines 1-25
+of the current file had never been seen); it proves the runtime's phantom last
+line against the file on disk instead of waiting for a later edit's record;
+and it detects a change made outside the log by mtime — with a five-second
+grace for the session's own edit, because the transcript is written with a
+lag and the result of edit *n* is not always there when the hook for edit
+*n+1* fires (measured: seven edits in one turn, seven receipts seeing the same
+count). Verified on Claude Code 2.1.274 in a clean-room session; wiring and
+limits in [hooks/](hooks/). 37 tests, 7 mutants, each mutant killed.
+
 ## Status
 
 The disciplines are usable now and two falsifiers are automated. The citation
 gate runs in CI on every push and blocks the merge. The order gate is
-report-only. Each has a mutation check that deletes every rule in turn and
-requires the suite to go red — a test that passes with the mechanism removed is
-decoration.
+report-only in CI and runs live, in warning mode, as a `PreToolUse` hook. Each
+has a mutation check that deletes every rule in turn and requires the suite to
+go red — a test that passes with the mechanism removed is decoration.
 
 Reported straight, as The Record demands: **The Record has an executable
 falsifier. The Bench and The Hypothesis have ONE rule each witnessed by the order
-gate, which needs a session log to judge and therefore judges nothing in CI. The
-Replication has none here.** Everything else is still enforced by reading.
+gate, which needs a session log to judge and therefore judges nothing in CI —
+live, it warns; it does not stop anything. The Replication has none here.**
+Everything else is still enforced by reading.
 Sibling harnesses in this family carry executable falsifiers for other rules.
 Also still open: the order gate's false-positive rate on sessions other than its
 author's, and a scoring pass over a session's transcript beyond read order.
