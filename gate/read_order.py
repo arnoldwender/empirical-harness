@@ -153,6 +153,8 @@ class FileState:
     total: int | None = None
     known: bool = False        # read in full, or written whole by this session
     reads: int = 0
+    own_change: bool = False   # the session changed it since the last read
+    stale: bool = False        # was known in full, then changed with no edit in the log
 
 
 # --- paths -------------------------------------------------------------------
@@ -207,6 +209,12 @@ def parse_events(rows: list[tuple[int, dict[str, Any]]]) -> tuple[list[Event], C
                                      f"`start` >= 1 and `lines` >= 0")
                 if total is not None and (not is_int(total) or total < 0):
                     raise Unreadable(f"toollog line {n}: `total` is not a line count")
+                if total is not None and lines and start + lines - 1 > total:
+                    # A window that overruns the file it came from is not a generous
+                    # read, it is a log that contradicts itself — and the cheapest way
+                    # there is to fake full coverage. Refused, not rounded down.
+                    raise Unreadable(f"toollog line {n}: lines {start}-{start + lines - 1} "
+                                     f"of a {total}-line file — the log contradicts itself")
                 ev.start, ev.lines, ev.total = start, lines, total
         events.append(ev)
     return events, ignored
@@ -275,17 +283,21 @@ def from_claude_transcript(path: Path) -> tuple[list[tuple[int, dict[str, Any]]]
     files. So an agent that reads a 912-line file in careful consecutive blocks is
     reported as having seen 912 of 913 — a finding against exactly the behaviour
     the rule asks for. The result of an Edit carries the file as it was
-    (`originalFile`); when that text ends in a newline the phantom line is proven
-    and is taken out of that file's totals. Where no edit supplies the proof — a
-    file that was only read — the total is left as reported: the adapter cannot
+    (`originalFile`); when that text ends in a newline AND has exactly the length
+    the read reported, the phantom line is proven for that version of the file and
+    is taken out of that read's total. The length has to match: a proof about the
+    file as it stood at one edit says nothing about a read of some other version.
+    Where no edit supplies the proof — a file that was only read, or one too large
+    for the runtime to record — the total is left as reported: the adapter cannot
     tell a trailing newline from an unread last line, and does not guess.
     """
     source = read_jsonl(path, "transcript")
-    phantom: set[str] = set()
+    phantom: dict[str, set[int]] = {}
     for _, row in source:
         result = row.get("toolUseResult")
-        if isinstance(result, dict) and str(result.get("originalFile") or "").endswith("\n"):
-            phantom.add(str(result.get("filePath")))
+        before = result.get("originalFile") if isinstance(result, dict) else None
+        if isinstance(before, str) and before.endswith("\n"):
+            phantom.setdefault(str(result.get("filePath")), set()).add(before.count("\n") + 1)
 
     pending: dict[str, tuple[str, dict[str, Any]]] = {}
     rows: list[tuple[int, dict[str, Any]]] = []
@@ -318,7 +330,7 @@ def from_claude_transcript(path: Path) -> tuple[list[tuple[int, dict[str, Any]]]
                     event["path"] = info.get("filePath") or target
                     start, lines, total = (info.get("startLine", 1), info.get("numLines"),
                                            info.get("totalLines"))
-                    if event["path"] in phantom and is_int(total) and total > 0 \
+                    if total in phantom.get(event["path"], ()) and is_int(total) \
                             and is_int(start) and is_int(lines):
                         total -= 1                 # the empty segment after the last newline
                         lines = max(0, min(lines, total - start + 1))
@@ -379,12 +391,19 @@ def replay(events: list[Event], allow: list[str]) -> tuple[dict[str, FileState],
         if ev.op == READ:
             st.reads += 1
             if ev.full:
-                st.known = True
+                st.known, st.own_change = True, False
                 continue
             if ev.total != st.total:
                 # The file is not the length it was: the earlier windows describe
                 # a file that no longer exists and cannot be added to these.
                 st.windows = []
+                if st.total is not None and ev.total is not None and not st.own_change:
+                    # ...and nothing this session did explains it. Something else
+                    # rewrote the file, so having read the OLD one in full is no
+                    # longer knowledge of this one. A change of the session's own
+                    # making does not count: it wrote those lines, it knows them.
+                    st.known, st.stale = False, True
+            st.own_change = False
             st.total = ev.total
             if ev.lines:
                 st.windows.append((ev.start, ev.start + ev.lines - 1))
@@ -405,10 +424,15 @@ def replay(events: list[Event], allow: list[str]) -> tuple[dict[str, FileState],
                             + (" (exactly one short: if this runtime counts the empty segment "
                                "after a final newline as a line, that is the line — the log "
                                "cannot say which)" if one_short else "")
+                            + (" — it HAD been read in full, then changed length with no "
+                               "edit in this log (something else rewrote it; if that was "
+                               "this session's own shell command, the log cannot see it)"
+                               if st.stale else "")
                             if st.reads and st.total is not None else
                             "after a read that never said how long the file was"
                             if st.reads else "and never read")
                     offences.setdefault(ev.path, []).append(ev)
+            st.own_change = True
             if ev.op == WRITE:
                 st.known = True                    # overwritten whole: it is all the session's now
 
@@ -439,12 +463,24 @@ def report_tokens(text: str) -> list[tuple[int, str]]:
     a line quoted from someone else are not the report asserting anything.
     """
     out: list[tuple[int, str]] = []
-    fenced = False
-    for n, raw in enumerate(text.splitlines(), 1):
-        stripped = raw.strip()
-        if stripped.startswith(("```", "~~~")):
-            fenced = not fenced
+    lines = text.split("\n")
+    # Pair the fences FIRST. A fence that never closes is a typo, not a code block:
+    # toggling on it would hide every sentence after it from CHECK 2, and the run
+    # would print "clean" over a report it had stopped reading halfway down.
+    inside: set[int] = set()
+    opened: tuple[int, str] | None = None
+    for i, raw in enumerate(lines):
+        marker = raw.strip()[:3]
+        if marker not in ("```", "~~~"):
             continue
+        if opened is None:
+            opened = (i, marker)
+        elif marker == opened[1]:
+            inside.update(range(opened[0], i + 1))
+            opened = None
+    for n, raw in enumerate(lines, 1):
+        stripped = raw.strip()
+        fenced = (n - 1) in inside
         if fenced or stripped.startswith(">"):
             continue
         for m in TOKEN.finditer(re.sub(r"https?://\S+", " ", raw)):
@@ -550,6 +586,8 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         skipped: Counter[str] = Counter()
+        if args.emit_toollog and not args.claude_transcript:
+            raise Unreadable("--emit-toollog converts a transcript; it needs --claude-transcript")
         if args.claude_transcript:
             rows, skipped = from_claude_transcript(Path(args.claude_transcript))
             if args.emit_toollog:

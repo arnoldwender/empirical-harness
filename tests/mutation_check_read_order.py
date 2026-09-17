@@ -15,15 +15,22 @@ read, prints a verdict over what was left, and the verdict looks like any other.
 Exit 0 when every mutant was killed; 1 when any survived; 2 when this script
 itself could not run (the same contract as the gate).
 
-The file is restored from an in-memory copy in a `finally`, never with
-`git checkout`: this repo may hold uncommitted work, and a checkout to undo a
-mutation would take that work with it. The restore is then verified.
+The real gate is NEVER rewritten. Each mutant is written to a scratch copy and
+the suite is pointed at it through `READ_ORDER_GATE_UNDER_TEST`. The first
+version of this runner mutated the file in place and restored it in a `finally`
+— and a `finally` does not run when the process is killed. It was killed once,
+mid-run, and left the last mutant sitting in the working tree; the suite caught
+it, a reader might not have. A copy cannot be left behind in the wrong place.
+The gate's bytes are still compared before and after, because "cannot" deserves
+a check too.
 """
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -61,6 +68,20 @@ MUTANTS = [
     ("CHECK 2 a fence or a blockquote is not the report's own voice",
      '        if fenced or stripped.startswith(">"):\n            continue',
      "        if False:\n            continue"),
+    # Toggle on every marker, closed or not: an unclosed fence then swallows the
+    # rest of the report, and the gate prints "clean" over what it stopped reading.
+    ("CHECK 2 a fence that never closes is not a fence",
+     "        elif marker == opened[1]:\n            inside.update(range(opened[0], i + 1))\n"
+     "            opened = None",
+     "        elif marker == opened[1]:\n            inside.update(range(opened[0], i + 1))\n"
+     "            opened = None\n    if opened is not None:\n"
+     "        inside.update(range(opened[0], len(lines)))"),
+    ("CHECK 1 a file rewritten underneath the session is no longer known",
+     "                    st.known, st.stale = False, True",
+     "                    pass"),
+    ("REFUSAL a window that overruns its own total",
+     "                if total is not None and lines and start + lines - 1 > total:",
+     "                if False:"),
     ("CHECK 2 a bare filename two files answer to names neither",
      "if tok == path or (tok == base and names[base] == 1):",
      "if tok == path or tok == base:"),
@@ -85,8 +106,12 @@ MUTANTS = [
     # Both directions are tested: with the correction removed a careful reader is
     # flagged, and with it applied blindly a real last line is forgiven.
     ("ADAPTER the phantom last line is dropped only where an edit proves it",
-     '                    if event["path"] in phantom and is_int(total) and total > 0 \\',
+     '                    if total in phantom.get(event["path"], ()) and is_int(total) \\',
      '                    if is_int(total) and total > 0 \\'),
+    # Path-only proof: any edit of the file, of any version, launders any read.
+    ("ADAPTER the proof has to be about the version that was read",
+     '            phantom.setdefault(str(result.get("filePath")), set()).add(before.count("\\n") + 1)',
+     '            phantom.setdefault(str(result.get("filePath")), set()).update(range(1, 10**4))'),
     ("ADAPTER the phantom last line is dropped at all",
      "                        total -= 1                 # the empty segment after the last newline",
      "                        pass"),
@@ -96,23 +121,26 @@ MUTANTS = [
 ]
 
 
-def run_suite() -> bool:
-    """True when the order gate's suite is green."""
+def run_suite(gate: Path) -> bool:
+    """True when the order gate's suite is green against `gate`."""
+    env = {**os.environ, "READ_ORDER_GATE_UNDER_TEST": str(gate)}
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", str(SUITE), "-q", "-x", "--no-header"],
-        capture_output=True, text=True, cwd=ROOT, check=False)
+        [sys.executable, "-m", "pytest", str(SUITE), "-q", "-x", "--no-header",
+         "-p", "no:cacheprovider"],
+        capture_output=True, text=True, cwd=ROOT, env=env, check=False)
     return result.returncode == 0
 
 
 def main() -> int:
     original = GATE.read_text(encoding="utf-8")
 
-    if not run_suite():
+    if not run_suite(GATE):
         print("the suite is RED before any mutation — fix that first", file=sys.stderr)
         return 2
 
     survivors: list[str] = []
-    try:
+    with tempfile.TemporaryDirectory() as scratch:
+        mutant = Path(scratch) / "read_order.py"
         for name, old, new in MUTANTS:
             if original.count(old) != 1:
                 print(f"  ?? {name}: anchor appears {original.count(old)} times in the "
@@ -120,23 +148,22 @@ def main() -> int:
                       f"measuring nothing")
                 survivors.append(f"{name} (stale)")
                 continue
-            GATE.write_text(original.replace(old, new, 1), encoding="utf-8")
-            if run_suite():
+            mutant.write_text(original.replace(old, new, 1), encoding="utf-8")
+            if run_suite(mutant):
                 print(f"  SURVIVED  {name} — removed it and the suite stayed green")
                 survivors.append(name)
             else:
                 print(f"  killed    {name}")
-    finally:
-        GATE.write_text(original, encoding="utf-8")
 
     if GATE.read_text(encoding="utf-8") != original:
-        print("the gate file was NOT restored cleanly", file=sys.stderr)
+        print("the real gate file changed during the run — it must never be touched",
+              file=sys.stderr)
         return 2
 
     if survivors:
         print(f"\n{len(survivors)} mutant(s) survived: {', '.join(survivors)}")
         return 1
-    print(f"\nall {len(MUTANTS)} mutants killed; gate restored and verified")
+    print(f"\nall {len(MUTANTS)} mutants killed; the real gate was never rewritten")
     return 0
 
 

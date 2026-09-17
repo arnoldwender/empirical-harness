@@ -23,7 +23,12 @@ from typing import Any
 
 import pytest
 
-GATE = Path(__file__).resolve().parent.parent / "gate" / "read_order.py"
+# The mutation runner points this at a mutated COPY. It never rewrites the real
+# gate: a runner that mutates the file in place and restores it in a `finally`
+# leaves the mutant on disk the day it is killed mid-run — which happened here,
+# once, before this line existed.
+GATE = Path(os.environ.get("READ_ORDER_GATE_UNDER_TEST")
+            or Path(__file__).resolve().parent.parent / "gate" / "read_order.py")
 
 
 def run(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -136,9 +141,29 @@ def test_overwriting_an_unread_file_is_caught(repo: Path) -> None:
 
 
 def test_overwriting_after_a_full_read_passes_and_later_edits_too(repo: Path) -> None:
+    """The file went from 40 lines to 90 because THIS session rewrote it. It wrote
+    those lines; a later partial look does not un-know them."""
     log(repo, read("src/a.py", 1, 40, 40), {"op": "write", "path": "src/a.py"},
         read("src/a.py", 1, 10, 90), edit("src/a.py"))
     assert run(repo).returncode == 0
+
+
+def test_a_file_that_changed_underneath_the_session_is_no_longer_known(repo: Path) -> None:
+    """Read in full at 100 lines; then it is 300 and nothing this session did
+    explains that. Having read the old file is not knowledge of the new one."""
+    log(repo, read("src/a.py", 1, 100, 100), read("src/a.py", 1, 50, 300), edit("src/a.py"))
+    r = run(repo)
+    assert r.returncode == 1
+    assert "50 of 300 lines" in r.stdout
+    assert "HAD been read in full" in r.stdout      # says which kind of finding this is
+
+
+def test_a_window_that_overruns_its_own_total_is_refused(repo: Path) -> None:
+    """The cheapest way to fake full coverage is a log that contradicts itself."""
+    log(repo, read("src/a.py", 1, 999999, 100), edit("src/a.py"))
+    r = run(repo)
+    assert r.returncode == 2
+    assert "contradicts itself" in r.stderr
 
 
 def test_one_finding_per_file_however_many_edits(repo: Path) -> None:
@@ -260,6 +285,12 @@ def test_a_path_inside_a_fence_or_a_blockquote_is_not_a_claim(repo: Path) -> Non
     assert run(repo, "--report", handback(repo, text)).returncode == 0
 
 
+def test_a_fence_that_never_closes_does_not_hide_the_rest_of_the_report(repo: Path) -> None:
+    log(repo, read("src/a.py", 1, 110, 309))
+    text = "Ran this:\n\n```bash\npython3 other.py\n\nThe invariant in src/a.py holds.\n"
+    assert run(repo, "--report", handback(repo, text)).returncode == 1
+
+
 def test_a_bare_filename_counts_when_only_one_logged_file_answers_to_it(repo: Path) -> None:
     log(repo, read("src/a.py", 1, 110, 309))
     assert run(repo, "--report", handback(repo, "Checked a.py: nothing to change.\n")).returncode == 1
@@ -373,6 +404,25 @@ def test_transcript_without_that_proof_the_last_line_stays_unread(repo: Path) ->
     r = run(repo, "--claude-transcript", blocks_then_edit(repo, "x = 1\n" * 912 + "tail"))
     assert r.returncode == 1
     assert "912 of 913 lines" in r.stdout
+
+
+def test_transcript_a_proof_about_another_version_of_the_file_proves_nothing(repo: Path) -> None:
+    """The edit's record ends in a newline, but it is a 1-line file and the read
+    reported 3 lines: that record is not about the file the read saw."""
+    target = str(repo / "src" / "a.py")
+    session = transcript(
+        repo,
+        call("t1", "Read", file_path=target, limit=2), result("t1", text_read(target, 1, 2, 3)),
+        call("t2", "Edit", file_path=target),
+        result("t2", {"filePath": target, "originalFile": "one line only\n"}))
+    r = run(repo, "--claude-transcript", session)
+    assert r.returncode == 1
+    assert "2 of 3 lines" in r.stdout
+
+
+def test_emit_toollog_without_a_transcript_is_a_usage_failure(repo: Path) -> None:
+    log(repo, read("src/a.py", 1, 9, 9))
+    assert run(repo, "--emit-toollog", str(repo / "out.jsonl")).returncode == 2
 
 
 def test_transcript_failed_calls_changed_nothing_and_read_nothing(repo: Path) -> None:

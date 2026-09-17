@@ -210,23 +210,31 @@ Run through `--claude-transcript` over 80 real agent sessions from one
 developer's machine (Claude Code 2.1.251 – 2.1.272, measured 2026-09-17):
 
 - 72 sessions changed an existing file, and **66 of those had at least one
-  finding** — 841 findings in all.
-- 510 were files edited after a partial read, most of them after less than half
+  finding** — 879 findings in all, one per file.
+- 499 were files edited after a partial read, most of them after less than half
   of the file had been seen.
-- 331 were files edited with no read through the read tool at all. What the
-  shell had done to them first: 250 had only been searched or windowed (`grep`,
-  `sed -n`, `head`), 52 had not been touched in any way, and **29 had been
-  `cat`-ed whole** — the blind spot named below, and this gate's measured
-  false-positive candidates: 29 of 841, 3.4 %.
+- 333 were files edited with no read through the read tool at all. What the
+  shell had done to them first: 252 had only been searched or windowed (`grep`,
+  `sed -n`, `head`), 52 had not been touched in any way, and 29 had been
+  `cat`-ed whole.
+- 47 were files the session HAD read in full, which then changed length with no
+  edit in the log, and were edited again after a partial look. The one traced by
+  hand was the session's own shell script rewriting the file.
+- So the measured **false-positive candidates are 76 of 879, 8.6 %** — the 29
+  and the 47, both of them the shell blind spot named below. They are candidates,
+  not verdicts: a whole-file `cat` may have been cut short by the runtime, and a
+  script that rewrites a file does not make its author a reader of the result.
 - 6 findings were exactly one line short. That runtime counts the empty segment
   after a final newline as a line (measured: 1,462 of 1,462 newline-terminated
-  files). The adapter removes it where the edit's own record proves it; where
-  nothing proves it, the finding stays and says what it cannot know.
+  files). The adapter removes it only where an edit's own record proves it for
+  that version of the file; where nothing proves it, the finding stays and says
+  what it cannot know.
 
-Two defects of the gate itself surfaced in that run and were fixed before this
-section was written: the one-line-short false positive, and four session files
-refused as "not JSON" because the loader cut rows at U+2028, which is legal
-inside a JSON string. Each now has a test and a mutant.
+Three defects of the gate itself surfaced before this section was written, two
+from that run and one from review, and each now has a test and a mutant: the
+one-line-short false positive; four session files refused as "not JSON" because
+the loader cut rows at U+2028, which is legal inside a JSON string; and a full
+read that kept vouching for a file after something else had rewritten it.
 
 The rate is the finding. The rule was broken in nine sessions out of ten by an
 agent whose standing instructions state it in so many words — which is the
