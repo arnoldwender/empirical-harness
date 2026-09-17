@@ -171,18 +171,100 @@ quietly dropping it:
 Both stay in the pool, marked, with the reason written down. That is The Record
 applied to the harness itself: name what you could not verify.
 
+## The second gate — `gate/read_order.py`
+
+The citation gate asks whether a quotation traces to its source. This one asks
+the same question of the agent's own work: **was the file read — all of it —
+before it was changed, or before the hand-back spoke about it?** It is the
+executable form of The Bench 2 (*change only what you understand*) and The
+Hypothesis 3 (*a claim you didn't just check is an untested hypothesis*), and it
+is a predicate over the ORDER of tool calls, which is why arithmetic can decide
+it and opinion does not have to.
+
+```bash
+python3 gate/read_order.py --toollog .conduct/toollog.jsonl
+python3 gate/read_order.py --claude-transcript SESSION.jsonl --report HANDBACK.md
+python3 gate/read_order.py --toollog LOG.jsonl --sarif read-order.sarif
+```
+
+Same exit contract: `0` clean · `1` findings · `2` the gate itself failed. A
+missing or unreadable log is `2`, never `0` — no evidence is not a clean session.
+
+| Check | Catches |
+|---|---|
+| `edit-before-full-read` | an existing file edited or overwritten before the session had read every line of it — a read that arrives *after* the edit redeems nothing |
+| `claim-on-partial-read` | (`--report`) the hand-back speaks about a file the session read only through a window |
+| `claim-on-unread` | (`--report --strict-claims`, opt-in) the hand-back names a file in the tree the session never opened |
+
+The toollog is one JSON object per line — `read` with `start` / `lines` /
+`total` (or `full: true`), `edit`, `write`, `create` — and the format is
+documented at the top of the gate. Windows add up: reading a long file in
+consecutive blocks is a full read, two windows with a gap between them are not,
+and a read that carries no `total` proves nothing and is never rounded up.
+Exemptions live in `.conduct/read-order-allow.txt`, one glob per line, each with
+its reason after a `#`; a glob with no reason is refused, not honoured.
+
+### Measured before it was believed
+
+Run through `--claude-transcript` over 80 real agent sessions from one
+developer's machine (Claude Code 2.1.251 – 2.1.272, measured 2026-09-17):
+
+- 72 sessions changed an existing file, and **66 of those had at least one
+  finding** — 841 findings in all.
+- 510 were files edited after a partial read, most of them after less than half
+  of the file had been seen.
+- 331 were files edited with no read through the read tool at all. What the
+  shell had done to them first: 250 had only been searched or windowed (`grep`,
+  `sed -n`, `head`), 52 had not been touched in any way, and **29 had been
+  `cat`-ed whole** — the blind spot named below, and this gate's measured
+  false-positive candidates: 29 of 841, 3.4 %.
+- 6 findings were exactly one line short. That runtime counts the empty segment
+  after a final newline as a line (measured: 1,462 of 1,462 newline-terminated
+  files). The adapter removes it where the edit's own record proves it; where
+  nothing proves it, the finding stays and says what it cannot know.
+
+Two defects of the gate itself surfaced in that run and were fixed before this
+section was written: the one-line-short false positive, and four session files
+refused as "not JSON" because the loader cut rows at U+2028, which is legal
+inside a JSON string. Each now has a test and a mutant.
+
+The rate is the finding. The rule was broken in nine sessions out of ten by an
+agent whose standing instructions state it in so many words — which is the
+argument for a gate over a paragraph.
+
+### What it does not see
+
+- A file read or changed through the shell. The log records the command, not
+  what arrived, so a shell read counts as no read — it errs toward a finding,
+  never toward silence.
+- A file changed underneath the session by something else.
+- Whether the agent understood what it read. Reading every line is necessary
+  for the rule and nowhere near sufficient.
+- Whether a sentence in the hand-back is a claim or a pointer. The check fires
+  on the mention; a reader decides what the mention meant.
+- Any runtime other than Claude Code. Its session format is the only one that
+  was measured, so it is the only adapter that ships; anything else writes the
+  toollog itself.
+
+It is **report-only**: SARIF `warning`, and deliberately not a required status
+check. In CI it runs against a sample log and a planted defect, to prove it
+still has teeth; it judges a real session only where someone points it at one.
+
 ## Status
 
-The disciplines are usable now and The Record's falsifier is automated: the
-citation gate runs in CI on every push, with a mutation check that deletes each
-rule and requires the suite to go red — a test that passes with the mechanism
-removed is decoration.
+The disciplines are usable now and two falsifiers are automated. The citation
+gate runs in CI on every push and blocks the merge. The order gate is
+report-only. Each has a mutation check that deletes every rule in turn and
+requires the suite to go red — a test that passes with the mechanism removed is
+decoration.
 
-Reported straight, as The Record demands: **one of the four pillars has an
-executable falsifier; three do not yet.** The Bench, The Hypothesis and The
-Replication are still enforced by reading. Sibling harnesses in this family
-carry the executable falsifiers for those. Also still open: a scoring pass over
-a session's transcript.
+Reported straight, as The Record demands: **The Record has an executable
+falsifier. The Bench and The Hypothesis have ONE rule each witnessed by the order
+gate, which needs a session log to judge and therefore judges nothing in CI. The
+Replication has none here.** Everything else is still enforced by reading.
+Sibling harnesses in this family carry executable falsifiers for other rules.
+Also still open: the order gate's false-positive rate on sessions other than its
+author's, and a scoring pass over a session's transcript beyond read order.
 
 ## License
 

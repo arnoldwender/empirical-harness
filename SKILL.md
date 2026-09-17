@@ -67,7 +67,8 @@ IV. THE REPLICATION (persistence — whether it holds)
 This repository ships gates that turn part of the codex into checks. Run them from the skill root:
 
 ```bash
-python3 gate/citations.py          # every attributed quotation resolves to sources/  (this edition's own gate)
+python3 gate/read_order.py --toollog LOG.jsonl  # this edition's own gate, report-only: needs a session log
+python3 gate/citations.py                       # every attributed quotation resolves to sources/  (this edition's own gate)
 ```
 
 Exit `0` clean · `1` findings · `2` the gate itself failed. They automate one or two of the
